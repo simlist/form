@@ -1,0 +1,22 @@
+{
+  "name": "form",
+  "version": "0.0.1",
+  "description": "A form and fetching module for react using hooks.",
+  "main": "form.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/simlist/form.git"
+  },
+  "author": "MS List",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/simlist/form/issues"
+  },
+  "homepage": "https://github.com/simlist/form#readme",
+  "dependencies": {
+    "js-cookie": "^2.2.1"
+  }
+}
