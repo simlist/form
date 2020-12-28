@@ -12,10 +12,11 @@ const headers ={
   'Accept': 'application/json'
 }
 
-const useFetchingBase = (methodName, url, initData=null) => {
+const useFetchingBase = (methodName, url, initData) => {
   const [loading, setLoading] = useState(false);
-  const [fetchData, setFetchData] = useState({});
+  const [fetchData, setFetchData] = useState(null);
   const [data, setData] = useState([]);
+  const [errors, setErrors] = useState({});
   const [shouldSend, setShouldSend] = useState(false);
   const [statusCode, setStatusCode] = useState(null);
   const [ok, setOk] = useState(null);
@@ -23,17 +24,22 @@ const useFetchingBase = (methodName, url, initData=null) => {
   const clear = () => {
     setLoading(false);
     setData([]);
+    setErrors({});
     setShouldSend(false);
     setStatusCode(null);
     setOk(null);
+    setFetchData(null);
   }
 
-  const send = (formData) => {
+  const send = (formData=null) => {
     if (formData) {
-      if (initData) {
+      if (initData){ 
         setFetchData({...initData, ...formData});
+      } else {
+        setFetchData(formData);
       }
-      else setFetchData(formData);
+    } else {
+      setFetchData(initData);
     }
     setShouldSend(true);
   }
@@ -53,20 +59,33 @@ const useFetchingBase = (methodName, url, initData=null) => {
           mode: 'cors',
           credentials: credentials
         }
-        if (Object.keys(fetchData).length) {
+        if (fetchData) {
           init.body = JSON.stringify(fetchData);
         }
         try {
           const response = await fetch(url, init);
           if (response.headers.get('content-type')) {
             const fetchedData = await response.json();
-            setData(fetchedData);
+            if (response.ok) {
+              setData(fetchedData);
+              setErrors({});
+            } else {
+              setErrors(fetchedData);
+            }
           }
           setStatusCode(response.status);
           setOk(response.ok);
-        } catch(e) {
-            setStatusCode(404);
-            console.log(e);
+        } catch(err) {
+          if (err instanceof TypeError) {
+              setOk(false);
+              setStatusCode(418);
+              setErrors(
+                {network: 'Could not connect to server. Check your connection.'}
+              );
+              console.error(err);
+          } else {
+            throw err;
+          }
         } finally {
           setLoading(false);
           setShouldSend(false);
@@ -77,7 +96,7 @@ const useFetchingBase = (methodName, url, initData=null) => {
   }, [shouldSend,]);
   return {
     data: data, loading: loading, statusCode: statusCode,
-    ok: ok, send: send, setData: setData, clear: clear};
+    ok: ok, send: send, setData: setData, clear: clear, errors: errors};
 }
 
 export const useGetContent = path => useFetchingBase('GET', contentPath + path);
@@ -97,8 +116,8 @@ export const useAuth = () => {
   const [formData, setFormData] = useState({});
   const [loggedIn, setLoggedIn] = useState(true);
   const url = `${apiPath}auth/`;
-  const {data, statusCode, ok, loading, send, clear} = useFetchingBase(
-    'POST', `${url}${action}/`);
+  const {data, statusCode, ok, loading, send, clear, errors} = useFetchingBase(
+    'POST', `${url}${action}/`, formData);
 
   useEffect(() => {
     if (ok && (action === 'login')) {
@@ -132,6 +151,9 @@ export const useAuth = () => {
     setLoggedIn(false);
     clear();
   }
-  return {loading: loading, loggedIn: loggedIn, statusCode: statusCode,
-    setLoggedIn: setLoggedIn, login: login, logout: logout, data: data};
+  return {
+    loading: loading, loggedIn: loggedIn, statusCode: statusCode,
+    setLoggedIn: setLoggedIn, login: login, logout: logout, data: data,
+    errors: errors
+  };
 }
